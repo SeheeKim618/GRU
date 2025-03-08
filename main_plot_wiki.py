@@ -7,10 +7,7 @@ from jax import random
 import jax.numpy as np
 #import numpy as np
 
-from CopyTaskData import CopyTaskData
-from lstm import LSTM
 from gru_wiki import GRU
-from lstm_lora import LSTM_LORA
 from gru_lora_wiki import GRU_LORA
 from utils import CrossEntropyLoss, CrossEntropyLoss_RTRL, compute_ema, load_model
 from datasets import load_dataset
@@ -31,10 +28,10 @@ def main(args):
     key = random.PRNGKey(1)
     np.set_printoptions(formatter={'float_kind':"{:.5f}".format})
 
-    epochs = 100 #128
+    epochs = 150 #128
 
     epochs_pretrain = 50 #70 
-    epochs_finetune = 50 #58
+    epochs_finetune = 100 #58
 
     logEvery = 1
     batch_size = 32
@@ -47,7 +44,7 @@ def main(args):
 
     hidden_size = 32
 
-    seq_length = 100
+    seq_length = 128
 
     embedding_dim = 32
 
@@ -55,7 +52,7 @@ def main(args):
     rank_constraint_w = 8  
     rank_constraint_r = 8 
 
-    dataset = load_dataset("Salesforce/wikitext", "wikitext-103-raw-v1")
+    dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1")
     # Check the dataset structure
     print(dataset)
 
