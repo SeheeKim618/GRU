@@ -135,8 +135,6 @@ def main(args):
         online = config['online']
         recurrent_density = config['recurrent_density']
         inout_density = config['inout_density']
-        #rank_constraint_w = config['rank_constraint_w']
-        #rank_constraint_r = config['rank_constraint_r']
 
         if algo_type == "bptt":
             lossFunction = CrossEntropyLoss
