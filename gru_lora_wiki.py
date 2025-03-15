@@ -222,8 +222,8 @@ class GRU_LORA:
         self.J_b = SparseMatrix(m=self.hidden_size, n=total_b_params)
 
         # Initialize the sparse matrices with random or specific data if necessary
-        self.J_a_data = self.J_a.init()
-        self.J_b_data = self.J_b.init()
+        #self.J_a_data = self.J_a.init()
+        #self.J_b_data = self.J_b.init()
 
         # End timing
         end_time = time.time()
@@ -233,9 +233,9 @@ class GRU_LORA:
 
         print('Jacobian Shape for a: ', self.J_a.shape) #(32, 2048)
         print('Jacobian Shape for b: ', self.J_b.shape) #(32, 1120)
-        print('Jacobian params for a: ', self.J_a.len) #65536
-        print('Jacobian params for b: ', self.J_b.len) #35840
-        print('RTRL_LoRA Jacobian total params: ', (self.J_a.len + self.J_b.len)) #101376
+        print('Jacobian params for a: ', self.J_a.shape[0] * self.J_a.shape[1]) #65536
+        print('Jacobian params for b: ', self.J_b.shape[0] * self.J_b.shape[1]) #35840
+        print('RTRL_LoRA Jacobian total params: ', (self.J_a.shape[0] * self.J_a.shape[1] + self.J_b.shape[0] * self.J_b.shape[1])) #101376
 
         return jacobian_time
     
@@ -282,11 +282,11 @@ class GRU_LORA:
         #print("type of self.J_a: ", type(self.J_a))
         #print("Jh_data_a: ", Jh_data_a.shape)
         # Compute Jacobian products and update Jh, Jc
-        h_Jh_a = np.dot(grad_h_h, self.J_a.toDense(Jh_data_a))[tuple(self.J_a.coords)]
-        Jh_a = grad_h_params_flat_a[tuple(self.J_a.coords)] + h_Jh_a 
+        h_Jh_a = np.dot(grad_h_h, self.J_a.toDense_rtrl(Jh_data_a))
+        Jh_a = grad_h_params_flat_a + h_Jh_a 
 
-        h_Jh_b = np.dot(grad_h_h, self.J_b.toDense(Jh_data_b))[tuple(self.J_b.coords)]
-        Jh_b = grad_h_params_flat_b[tuple(self.J_b.coords)] + h_Jh_b 
+        h_Jh_b = np.dot(grad_h_h, self.J_b.toDense_rtrl(Jh_data_b))
+        Jh_b = grad_h_params_flat_b + h_Jh_b 
 
         return h, Jh_a, Jh_b
 
@@ -304,13 +304,13 @@ class GRU_LORA:
 
     @partial(jit, static_argnums=(0,))
     def combineGradients_a(self, grad_h, grad_out_params_a, Jh_data_a):
-        grad_rec_params = np.dot(grad_h, self.J_a.toDense(Jh_data_a))
+        grad_rec_params = np.dot(grad_h, self.J_a.toDense_rtrl(Jh_data_a))
         grad_out_params_flat = grad_out_params_a.flatten()
         return np.concatenate((grad_rec_params, grad_out_params_flat))
     
     @partial(jit, static_argnums=(0,))
     def combineGradients_b(self, grad_h, grad_out_params_b, Jh_data_b):
-        grad_rec_params = np.dot(grad_h, self.J_b.toDense(Jh_data_b))
+        grad_rec_params = np.dot(grad_h, self.J_b.toDense_rtrl(Jh_data_b))
         grad_out_params_flat = grad_out_params_b.flatten()
         return np.concatenate((grad_rec_params, grad_out_params_flat))
 
@@ -430,8 +430,8 @@ class GRU_LORA:
         # Initialize hidden and cell states, and Jacobians for the batch
         h = np.zeros((self.batch_size, self.hidden_size))
 
-        Jh_data_a = np.zeros((self.batch_size, self.J_a.len))
-        Jh_data_b = np.zeros((self.batch_size, self.J_b.len))
+        Jh_data_a = np.zeros((self.batch_size, self.J_a.shape[0] * self.J_a.shape[1]))
+        Jh_data_b = np.zeros((self.batch_size, self.J_b.shape[0] * self.J_b.shape[1]))
 
         losses = []
 
