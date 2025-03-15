@@ -48,7 +48,7 @@ def main(args):
 
     hidden_size = 32
 
-    seq_length = 100
+    seq_length = 128
 
     embedding_dim = 32
 
