@@ -67,12 +67,7 @@ class GRU:
         print('Sparse GRU params: ', len(self.paramsData.flatten()))
         print('Density: ', self.recurrent_density)
 
-        if self.algo_type == 'rtrl':
-            self.jacobian_init_time = self.initialize_jacob(2)
-
-            print('Online Updates!')
-            self.update = self.update_online
-        elif self.algo_type == 'snap':
+        if self.algo_type == 'snap':
             self.jacobian_init_time = self.initialize_jacob(snap_level)
 
             if (self.online):
@@ -144,7 +139,7 @@ class GRU:
 
         self.paramsData = np.concatenate((Wr_data, Wu_data, Wh_data, Rr_data, Ru_data, Rh_data, V_data))
 
-    #@partial(jit, static_argnums=(0,))
+    @partial(jit, static_argnums=(0,))
     def gru(self, params, x, h):
         # Convert materialized params to dense if necessary
         wr_dense = self.Wr.toDense(params[self.Wr.start:self.Wr.end,])
@@ -183,7 +178,7 @@ class GRU:
         #print("type of self.J: ", type(self.J)) #class 'utils.SparseMatrix'
         #print("shape of self.J: ", self.J.shape) #(32, 4480)
         #print("shape of self.J.coords: ", len(self.J.coords)) #2
-
+        #print("hiiiiii", self.J.toDense(Jh_data).shape)
         h_Jh = np.dot(grad_h_h, self.J.toDense(Jh_data))[tuple(self.J.coords)]
         Jh = grad_h_params[tuple(self.J.coords)] + h_Jh
 
@@ -310,7 +305,7 @@ class GRU:
             
         return o
 
-    #@partial(jit, static_argnums=(0,))
+    @partial(jit, static_argnums=(0,))
     def forward_step_BPTT(self, paramsData, x, t, h, o):
         h = self.gru(paramsData[:self.Rh.end,], x[t], h)
 
