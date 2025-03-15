@@ -149,6 +149,11 @@ class SparseMatrix:
         #print(f"Expected shape: {self.shape}")
         #print(f"Coordinates: {self.coords}")
         return np.zeros(self.shape).at[tuple(self.coords)].add(data)
+    
+    @partial(jit, static_argnums=(0,))
+    def toDense_rtrl(self, data):
+
+        return data.reshape(self.shape)
 
 @jit
 def BinaryCrossEntropyLoss(y_hat, y):
