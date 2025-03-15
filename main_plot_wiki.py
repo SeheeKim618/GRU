@@ -7,8 +7,12 @@ from jax import random
 import jax.numpy as np
 #import numpy as np
 
+from CopyTaskData import CopyTaskData
+from lstm import LSTM
 from gru_wiki import GRU
+from lstm_lora import LSTM_LORA
 from gru_lora_wiki import GRU_LORA
+from gru_rtrl_wiki import GRU_RTRL
 from utils import CrossEntropyLoss, CrossEntropyLoss_RTRL, compute_ema, load_model
 from datasets import load_dataset
 
@@ -28,14 +32,14 @@ def main(args):
     key = random.PRNGKey(1)
     np.set_printoptions(formatter={'float_kind':"{:.5f}".format})
 
-    epochs = 150 #128
+    epochs = 200 #128
 
-    epochs_pretrain = 50 #70 
-    epochs_finetune = 100 #58
+    epochs_pretrain = 20 #70 
+    epochs_finetune = 180 #58
 
     logEvery = 1
     batch_size = 32
-    learning_rate = 1e-2
+    #learning_rate = 1e-2 #1e-3 /4
 
     bits = 1
     padding = 0
@@ -44,7 +48,7 @@ def main(args):
 
     hidden_size = 32
 
-    seq_length = 128
+    seq_length = 100
 
     embedding_dim = 32
 
@@ -136,19 +140,21 @@ def main(args):
 
         if algo_type == "bptt":
             lossFunction = CrossEntropyLoss
-            #learning_rate = 1e-2
+            learning_rate = 1e-3
+        elif algo_type == "snap":
+            learning_rate = 1e-3
         elif algo_type == "lora_rtrl":
             lossFunction_pretrain = CrossEntropyLoss
             lossFunction_finetune = CrossEntropyLoss_RTRL
-            #learning_rate_pretrain = 1e-2
-            #learning_rate_finetune = 5e-3
-        else:
+            learning_rate_pretrain = 1e-2
+            learning_rate_finetune = 1e-2
+        else: #RTRL
             lossFunction = CrossEntropyLoss_RTRL
-            #learning_rate = 5e-3
+            learning_rate = 1e-3
        
         print(f"Running with settings: Model={args.model}, Type={algo_type}, Level={level}, Online={online}, Recurrent Density={recurrent_density}, Input and Output Density={inout_density}")
 
-        if algo_type in ['rtrl', 'snap', 'bptt']:
+        if algo_type in ['snap', 'bptt']:
             model = GRU(key, 
                     output_size, 
                     hidden_size, 
@@ -168,12 +174,40 @@ def main(args):
             params, losses, validation_losses, epochs_list, total_training_time = model.run(epochs, train_id, validation_id)
 
             # Compute EMA for validation losses
-            alpha = 0.1  # Smoothing factor, can be adjusted between 0 and 1
+            alpha = 0.2  # Smoothing factor, can be adjusted between 0 and 1
             validation_loss_ema = compute_ema(validation_losses, alpha)
 
             # Store the collected validation losses
             validation_losses_dict[model_name] = (epochs_list, validation_loss_ema)
             total_training_times[model_name].append(total_training_time)
+            #jacobian_init_times[model_name] = model.jacobian_init_time
+        
+        elif algo_type == 'rtrl':
+            model = GRU_RTRL(key, 
+                    output_size, 
+                    hidden_size, 
+                    batch_size, 
+                    recurrent_density, 
+                    inout_density, 
+                    level, 
+                    lossFunction, 
+                    algo_type,
+                    seq_length,
+                    vocab_size, 
+                    embedding_dim, 
+                    logEvery, 
+                    learning_rate, 
+                    online)
+
+            params, losses, validation_losses_rtrl, epochs_list_rtrl, total_training_time_rtrl = model.run(epochs, train_id, validation_id)
+
+            # Compute EMA for validation losses
+            alpha = 0.2  # Smoothing factor, can be adjusted between 0 and 1
+            validation_loss_ema = compute_ema(validation_losses_rtrl, alpha)
+
+            # Store the collected validation losses
+            validation_losses_dict[model_name] = (epochs_list_rtrl, validation_loss_ema)
+            total_training_times[model_name].append(total_training_time_rtrl)
             #jacobian_init_times[model_name] = model.jacobian_init_time
 
         elif algo_type == 'lora_rtrl':
@@ -193,10 +227,10 @@ def main(args):
                     logEvery, 
                     learning_rate, 
                     online)
-            params, losses_pretrain, validation_losses_pretrain, epochs_list_pretrain, total_training_time_pretrain = model.run(epochs_pretrain, pretrain_id, validation_id)  
+            params, losses, validation_losses_pretrain, epochs_list_pretrain, total_training_time_pretrain = model.run(epochs_pretrain, pretrain_id, validation_id)  
 
             # Compute EMA for validation losses
-            alpha = 0.1  # Smoothing factor, can be adjusted between 0 and 1
+            alpha = 0.2  # Smoothing factor, can be adjusted between 0 and 1
             validation_loss_pretrain_ema = compute_ema(validation_losses_pretrain, alpha)
 
             # Store the collected validation losses
@@ -259,6 +293,7 @@ def main(args):
             print("Error: Training algorithm Type is not provided.")
 
     print("----------train is done.-----------")
+    print("total training time: ", total_training_times)
 
     # Plotting validation losses for each model type
     plt.figure()
