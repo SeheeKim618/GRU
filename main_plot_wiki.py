@@ -56,7 +56,7 @@ def main(args):
     rank_constraint_w = 8  
     rank_constraint_r = 8 
 
-    dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1")
+    dataset = load_dataset("Salesforce/wikitext", "wikitext-103-raw-v1")
     # Check the dataset structure
     print(dataset)
 
