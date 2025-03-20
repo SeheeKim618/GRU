@@ -7,10 +7,7 @@ from jax import random
 import jax.numpy as np
 #import numpy as np
 
-#from CopyTaskData import CopyTaskData
-#from lstm import LSTM
 from gru_wiki import GRU
-#from lstm_lora import LSTM_LORA
 from gru_lora_wiki import GRU_LORA
 from gru_rtrl_wiki import GRU_RTRL
 from utils import CrossEntropyLoss, CrossEntropyLoss_RTRL, compute_ema, load_model
