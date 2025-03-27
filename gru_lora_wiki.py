@@ -272,8 +272,8 @@ class GRU_LORA:
             grad_h_value = grad_h_params[key]
 
             # Extract and flatten 'a' and 'b' components
-            grad_h_flattened_params_a.append(grad_h_value.a.reshape(32, -1))
-            grad_h_flattened_params_b.append(grad_h_value.b.reshape(32, -1))
+            grad_h_flattened_params_a.append(grad_h_value.a.reshape(self.hidden_size, -1))
+            grad_h_flattened_params_b.append(grad_h_value.b.reshape(self.hidden_size, -1))
 
         # Concatenate all flattened arrays along the last axis (axis=1)
         grad_h_params_flat_a = jnp.concatenate(grad_h_flattened_params_a, axis=1)
